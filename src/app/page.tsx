@@ -105,7 +105,10 @@ export default function Home() {
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-6 text-center space-y-8">
+      <div 
+        className="flex flex-col items-center justify-center min-h-screen bg-background p-6 text-center space-y-8"
+        style={{ touchAction: 'pan-x pan-y' }}
+      >
         <div className="space-y-2">
           <h1 className="text-4xl font-bold tracking-tight text-primary">My Field Planner</h1>
           <p className="text-muted-foreground">Lifetime Cloud Sync for Field Agents</p>
@@ -392,13 +395,16 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col h-screen max-w-md mx-auto bg-background relative overflow-hidden shadow-2xl">
+    <div 
+      className="flex flex-col h-screen max-w-md mx-auto bg-background relative overflow-hidden shadow-2xl"
+      style={{ touchAction: 'pan-x pan-y' }}
+    >
       <Navbar 
         selectedCount={selectedTaskIds.length} 
         onDeleteSelected={handleDeleteSelected}
         onClearSelection={() => setSelectedTaskIds([])}
       />
-      <main className={cn("flex-1 overflow-y-auto relative", view === 'planning' ? "overflow-hidden" : "pb-24")}>
+      <main className={cn("flex-1 overflow-y-auto relative", "pb-24")}>
         {renderView()}
       </main>
       <FAB />

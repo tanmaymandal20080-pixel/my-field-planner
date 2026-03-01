@@ -1,11 +1,11 @@
 
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { usePlanner } from '@/app/planner-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Home, Link as LinkIcon, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Plus, Trash2, Home, Link as LinkIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AreaNode } from '@/lib/types';
 import { 
@@ -25,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { cn } from '@/lib/utils';
 
 export function AreaTree() {
@@ -191,89 +190,31 @@ export function AreaTree() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-muted/5 overflow-hidden relative">
+    <div className="flex flex-col h-full bg-muted/5 relative">
       <div className="p-4 border-b bg-background z-10 flex justify-between items-center shadow-md shrink-0">
         <div>
           <h2 className="text-xl font-black text-primary uppercase tracking-tighter">Route Network Map</h2>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase">Interactive DAG Flowchart • Zoom & Pan Enabled</p>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase">Static View • Builds Top-Down</p>
         </div>
       </div>
 
-      <div className="flex-1 relative bg-slate-50 overflow-hidden">
-        <TransformWrapper
-          initialScale={1}
-          minScale={0.4}
-          maxScale={2}
-          centerOnInit={true}
-          limitToBounds={true}
-          centerZoomedOut={true}
-          doubleClick={{ disabled: true }}
-          onInit={(ref) => {
-            // Force center on Home node immediately on mount
-            setTimeout(() => {
-              ref.zoomToElement('home-node', 1, 0);
-              ref.centerView(1, 0);
-            }, 300);
-          }}
-        >
-          {({ zoomIn, zoomOut, zoomToElement, centerView }) => (
-            <>
-              <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
-                <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className="rounded-xl shadow-lg w-10 h-10 bg-white hover:bg-slate-50 border" 
-                  onClick={() => zoomIn()}
-                >
-                  <ZoomIn className="h-5 w-5 text-primary" />
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className="rounded-xl shadow-lg w-10 h-10 bg-white hover:bg-slate-50 border" 
-                  onClick={() => zoomOut()}
-                >
-                  <ZoomOut className="h-5 w-5 text-primary" />
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className="rounded-xl shadow-lg w-10 h-10 bg-white hover:bg-slate-50 border" 
-                  onClick={() => {
-                    // BRUTE FORCE RESET: Target the specific home node element
-                    zoomToElement('home-node', 1, 600);
-                    setTimeout(() => centerView(1, 200), 650);
-                  }}
-                >
-                  <RotateCcw className="h-5 w-5 text-primary" />
-                </Button>
+      <div className="flex-1 relative bg-slate-50 overflow-auto">
+        <div className="p-10 flex justify-center min-w-max">
+          {rootNode ? (
+            renderVisualNode(rootNode)
+          ) : (
+            <div className="flex flex-col items-center gap-6 p-20 border-4 border-dashed border-primary/20 rounded-3xl bg-white/50">
+              <Home className="h-20 w-20 text-primary/20" />
+              <div className="text-center space-y-2">
+                <h3 className="text-2xl font-bold text-primary">Map Not Initialized</h3>
+                <p className="text-muted-foreground">Click below to start your route network.</p>
               </div>
-
-              <TransformComponent 
-                wrapperClassName="!w-full !h-full cursor-grab active:cursor-grabbing" 
-                contentClassName="!w-full !h-full flex items-center justify-center"
-              >
-                {/* Containment div with reasonable padding to define panning bounds */}
-                <div className="p-40 flex justify-center min-w-max min-h-max">
-                  {rootNode ? (
-                    renderVisualNode(rootNode)
-                  ) : (
-                    <div className="flex flex-col items-center gap-6 p-20 border-4 border-dashed border-primary/20 rounded-3xl bg-white/50">
-                      <Home className="h-20 w-20 text-primary/20" />
-                      <div className="text-center space-y-2">
-                        <h3 className="text-2xl font-bold text-primary">Map Not Initialized</h3>
-                        <p className="text-muted-foreground">Click below to start your route network.</p>
-                      </div>
-                      <Button size="lg" className="h-16 text-xl px-8 rounded-2xl" onClick={() => addArea('Home', null)}>
-                        Initialize Home Node
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </TransformComponent>
-            </>
+              <Button size="lg" className="h-16 text-xl px-8 rounded-2xl" onClick={() => addArea('Home', null)}>
+                Initialize Home Node
+              </Button>
+            </div>
           )}
-        </TransformWrapper>
+        </div>
       </div>
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
