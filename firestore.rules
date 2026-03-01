@@ -1,0 +1,90 @@
+/**
+ * FIRESTORE SECURITY RULES
+ * 
+ * CORE PHILOSOPHY:
+ * This ruleset implements a strict path-based ownership model optimized for lifetime cloud data persistence 
+ * and zero-data-loss recovery. Authorization is tied directly to the user's authenticated UID.
+ * 
+ * DATA STRUCTURE:
+ * All application data is strictly partitioned by user. The hierarchy follows:
+ * - /users/{userId} : The root user profile.
+ * - /users/{userId}/areaNodes/{nodeId} : Geographical locations forming a Directed Acyclic Graph (DAG).
+ * - /users/{userId}/tasks/{taskId} : Field tasks associated with specific users and areas.
+ * 
+ * KEY SECURITY DECISIONS:
+ * 1. Authorization Independence: Every document contains a denormalized 'userId' field. This allows 
+ *    the rules to verify ownership without performing expensive cross-document 'get()' lookups.
+ * 2. Path Consistency: Rules enforce that the 'userId' field inside the document matches the 
+ *    wildcard in the Firestore path, preventing users from masquerading as others.
+ * 3. Prototyping Flexibility: While authorization and relational integrity (ownership) are 
+ *    strictly enforced, the specific shape and types of content fields (e.g., task names, 
+ *    node coordinates) are not validated to allow for rapid UI iteration.
+ * 4. Immutable Identity: Relational fields such as 'userId' and the entity 'id' are made 
+ *    immutable after creation to ensure the integrity of the data graph.
+ */
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- GLOBAL HELPER FUNCTIONS ---
+
+    /** Checks if the request is coming from an authenticated user. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** Checks if the authenticated user's UID matches the provided userId. */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** Verifies the document exists and the current user is the owner. Used for updates and deletes. */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Rules for the root user document. Allows users to manage their own profile.
+     * @path /users/{userId}
+     * @allow (create) if auth.uid matches userId.
+     * @deny (read/write) if auth.uid does not match userId.
+     * @principle Pattern 4: Self-Creation and Pattern 1: Ownership.
+     */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update, delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Manages geographical AreaNodes (villages) for a specific user.
+     * @path /users/{userId}/areaNodes/{areaNodeId}
+     * @allow (create) if userId in path matches data.userId and data.id matches areaNodeId.
+     * @deny (update) if attempting to change the userId or node id.
+     * @principle Enforces path-based ownership and relational integrity for the DAG structure.
+     */
+    match /users/{userId}/areaNodes/{areaNodeId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId && request.resource.data.id == areaNodeId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Manages field tasks for a specific user.
+     * @path /users/{userId}/tasks/{taskId}
+     * @allow (list) if the user is the owner of the path.
+     * @deny (create) if the userId in the data does not match the authenticated user.
+     * @principle Ensures tasks are private to the creator and maintains consistent user linking.
+     */
+    match /users/{userId}/tasks/{taskId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId && request.resource.data.id == taskId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+  }
+}

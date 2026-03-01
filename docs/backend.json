@@ -1,0 +1,52 @@
+
+{
+  "entities": {
+    "AreaNode": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AreaNode",
+      "type": "object",
+      "description": "Represents a geographical location in the route network (DAG).",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "parentIds": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "List of parent node IDs supporting multi-path routing."
+        }
+      },
+      "required": ["id", "userId", "name", "parentIds"]
+    },
+    "Task": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Task",
+      "type": "object",
+      "description": "Represents a field task for an insurance agent.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "reason": { "type": "string" },
+        "date": { "type": ["string", "null"], "format": "date-time" },
+        "areaId": { "type": "string" },
+        "priority": { "enum": ["High", "Medium", "Low"] },
+        "isCompleted": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "clientName", "reason", "areaId", "priority", "isCompleted"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "/users/{userId}/areaNodes/{nodeId}": {
+      "schema": { "$ref": "#/entities/AreaNode" },
+      "description": "User-owned geographical nodes."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "User-owned field tasks."
+    }
+  }
+}
